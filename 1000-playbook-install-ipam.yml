@@ -1,0 +1,14 @@
+---
+
+- hosts: ipam
+  gather_facts: yes
+
+  pre_tasks:
+  - name: Inclure les variables du projet
+    include_vars:
+      file: "/applis/ansible/ans-install-ipam/project-vars/ipam_vars.yml"
+  tasks:
+  - name: Include les roles
+    include_role:
+      name: role-install-ipam-000
+      allow_duplicates: false

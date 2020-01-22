@@ -1,0 +1,24 @@
+<VirtualHost *:80>
+    ProxyPreserveHost On
+ 
+    ServerName {{ ansible_fqdn }}
+ 
+    Alias /static /opt/netbox/netbox/static
+ 
+    # Needed to allow token-based API authentication
+    WSGIPassAuthorization on
+ 
+    <Directory /opt/netbox/netbox/static>
+        Options Indexes FollowSymLinks MultiViews
+        AllowOverride None
+        Require all granted
+    </Directory>
+ 
+    <Location /static>
+        ProxyPass !
+    </Location>
+ 
+    RequestHeader set X-Forwarded-Proto "%{REQUEST_SCHEME}e"
+    ProxyPass / http://127.0.0.1:8000/
+    ProxyPassReverse / http://127.0.0.1:8000/
+</VirtualHost>

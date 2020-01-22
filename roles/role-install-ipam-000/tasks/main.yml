@@ -1,0 +1,222 @@
+---
+
+- name: IPAM - Chercher le paquet postgres 9.6 sur la machine
+  shell: "yum search postgresql |grep postgresql96.x86_64 | awk '{print $1}'"
+  register: check_pg_repo
+
+- name: IPAM - Informer l'utilisateur si le paquet est disponible ou non
+  debug:
+    msg: "Le paquet {{ check_pg_repo.stdout }} est disponible sur la machine"
+  when: check_pg_repo != ""
+
+- name: IPAM - Informer l'utilisateur si le paquet est disponible ou non
+  fail:
+    msg: "Aucun paquet postgres n'est disponible sur la machine, corriger ce problème avant de poursuivre."
+  when: check_pg_repo == "" and add_pg_repo == "no"
+
+- name: IPAM - Ajouter le dépôt posgresql 9.6 si la condition est remplie
+  yum_repository:
+    name: IT-LINUX_POSTGRES_9_6_ANS_MANAGED
+    description: Postgres 9.6 added by Ansible 
+    baseurl: https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-centos96-9.6-3.noarch.rpm
+  when: add_pg_repo == "yes"
+
+- name: IPAM - Installer les paquets postgresql 9.6 requis
+  yum:
+    name: "{{ packages }}"
+    state: latest
+  vars:
+    packages:
+      - postgresql96
+      - postgresql96-server
+      - postgresql96-devel
+      - python-psycopg2
+
+- name: IPAM - Initialiser la base Postgres
+  shell: "/usr/pgsql-9.6/bin/postgresql96-setup initdb"
+  ignore_errors: yes
+
+- name: IPAM - Gestion systemd du service Posgres
+  systemd:
+    enabled: yes
+    state: started
+    name: postgresql-9.6
+
+- name: IPAM - Remplacer la méthode de connexion dans le fichier
+  replace:
+    path: /var/lib/pgsql/9.6/data/pg_hba.conf
+    regexp: 'ident'
+    replace: 'md5'
+
+- name: IPAM - Redémarrage du service postgres
+  systemd:
+    name: postgresql-9.6
+    state: restarted
+
+- name: IPAM - Génération d'un mot de passe fort
+  shell: "openssl rand -base64 14"
+  register: pg_pwd
+
+- set_fact:
+    pg_pwd: "{{ pg_pwd.stdout }}"
+
+- name: IPAM - Création de la base netbox
+  postgresql_db:
+    name: netbox
+  become: yes
+  become_user: postgres
+  
+
+- name: IPAM - Création de l'utilisateur & affection des droits
+  postgresql_user:
+    db: netbox
+    name: "{{ netbox_user }}"
+    password: "{{ pg_pwd }}"
+    priv: "ALL"
+    expires: "infinity"
+  become: yes
+  become_user: postgres
+
+- name: IPAM - Installation des paquets requis par Netbox
+  yum:
+    name: "{{ packages }}"
+    state: latest
+  vars:
+    packages:
+      - gcc
+      - python36 
+      - python36-devel
+      - python36-setuptools
+      - libxml2-devel
+      - libxslt-devel
+      - libffi-devel
+      - graphviz
+      - graphviz
+      - redhat-rpm-config
+      - redis
+      - python36-pip
+
+- name: IPAM - Récupération de l'archive Netbox depuis git hub
+  get_url:
+    url: https://github.com/netbox-community/netbox/archive/v2.5.0.tar.gz
+    dest: /tmp
+
+- name: IPAM - Dézziper l'archive dans /opt
+  unarchive:
+    src: /tmp/netbox-2.5.0.tar.gz
+    dest: /opt
+    remote_src: yes
+
+- name: IPAM - Création du lien symbolique
+  file:
+    state: link
+    src: /opt/netbox-2.5.0
+    dest: /opt/netbox
+
+- name: IPAM - Installation des pré-requis python
+  pip:
+    requirements: requirements.txt
+    executable: pip3
+  args:
+    chdir: /opt/netbox
+
+- name: IPAM - Génération de la clé secrète via le script python de netbox
+  shell: "/opt/netbox/netbox/generate_secret_key.py"
+  register: netbox_secret_key
+
+- name: IPAM - Copier le fichier de configuration
+  template:
+    src: configuration.j2
+    dest: /opt/netbox/netbox/netbox/configuration.py
+
+- name: IPAM - Exécuter le script de migration des données
+  shell: "{{ item }}"
+  loop:
+    - "python3 manage.py migrate"
+    - "python3 manage.py collectstatic --no-input"
+  args:
+    chdir: /opt/netbox/netbox
+
+- name: IPAM - Création de l'utilisateur admin
+  shell: "{{ item }}"
+  loop:
+    - "python3 manage.py createsuperuser --noinput --username admin --email admin@{{ ansible_fqdn }}"
+#    - "echo admin | python3 manage.py changepassword admin"
+  args:
+    chdir: /opt/netbox/netbox
+
+- name: IPAM - Installation des paquets requis pour la partie frontend
+  yum:
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - httpd
+    - mod_wsgi.x86_64
+
+- name: IPAM - Vider les fichiers par défaut d'apache
+  shell: "rm -rf /etc/httpd/conf.d/*"
+
+- name: IPAM - Copier la configuration apache
+  template:
+    src: ipam.j2
+    dest: /etc/httpd/conf.d/ipam-frontend.conf
+
+- name: IPAM - Ouverture firewall
+  firewalld:
+    port: 80/tcp
+    permanent: yes
+    state: enabled
+    immediate: yes
+
+- name: IPAM - Démarrer le service Apache
+  systemd:
+    name: httpd
+    state: started
+    enabled: yes
+
+- name: IPAM - Installation de Gunicorn
+  pip:
+    name: gunicorn
+    executable: pip3
+  
+- name: IPAM - Copie du fichier de configuration de gunicorn
+  template:
+    src: gunicorn.j2
+    dest: /opt/netbox/gunicorn_config.py
+    owner: apache
+    group: apache
+
+- name: IPAM - Installation de supervisord
+  yum:
+    name: supervisor.noarch
+    state: latest
+
+- name: IPAM - Copie de la configuration de Supervisord
+  blockinfile:
+    path: /etc/supervisord.conf
+    block: |
+      [program:netbox]
+      command = gunicorn -c /opt/netbox/gunicorn_config.py netbox.wsgi
+      directory = /opt/netbox/netbox/
+      user = apache 
+      [program:netbox-rqworker]
+      command = python3 /opt/netbox/netbox/manage.py rqworker
+      directory = /opt/netbox/netbox/
+      user = apache
+
+- name: IPAM - Redémarrer le service supervisord
+  systemd:
+    name: supervisord
+    state: restarted
+    enabled: yes
+
+- name: IPAM - Installation du paquet pour la gestion SELinux
+  yum:
+    name: policycoreutils-python
+    state: latest
+
+- name: IPAM - Appliquer la règle pour autoriser httpd sur le port 80 via SELINUX
+  seboolean:
+    name: httpd_can_network_connect
+    state: yes
+    persistent: yes
