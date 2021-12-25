@@ -56,5 +56,5 @@
       status: Active
       dns_name: "{{ inventory_hostname }}"
       description: "{{ vm.description }}"
-    state: present
+    state: new
   delegate_to: localhost
