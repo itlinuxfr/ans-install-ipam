@@ -16,7 +16,7 @@
       site: "{{ netbox_site }}"
       status: Active
       serial: "{{ host_fact.ansible_facts.ansible_product_serial }}"
-      comments: "{{ description }}"
+      comments: "{{ vm.description }}"
     state: present
   delegate_to: localhost
 
@@ -54,6 +54,6 @@
         device: "{{ host_fact.ansible_facts.ansible_default_ipv4.interface }}"
       status: Reserved
       dns_name: "{{ inventory_hostname }}"
-      description: "{{ description }}"
+      description: "{{ vm.description }}"
     state: present
   delegate_to: localhost
