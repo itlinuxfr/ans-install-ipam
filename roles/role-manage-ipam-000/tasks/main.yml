@@ -53,4 +53,4 @@
       status: Reserved
       dns_name: "{{ inventory_hostname }}"
       description: "{{ description }}"
-    state: present
+  state: present
