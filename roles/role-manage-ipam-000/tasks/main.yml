@@ -50,6 +50,9 @@
     netbox_token: "{{ netbox_user_token }}"
     data:
       prefix: "{{ net_prefix }}/{{ net_mask }}"
+      assigned_object:
+        device: "{{ inventory_hostname }}"
+        name: "{{ host_fact.ansible_facts.ansible_default_ipv4.interface }}"
       interface: 
         name: "{{ host_fact.ansible_facts.ansible_default_ipv4.interface }}" 
         device: "{{ inventory_hostname }}"
