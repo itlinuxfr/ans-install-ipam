@@ -31,7 +31,7 @@
       mgmt_only: yes
       mtu: 1500
       name: "{{ host_fact.ansible_facts.ansible_default_ipv4.interface }}"
-  state: present
+    state: present
 
 - name: Netbox - Store the address ipv4 with netmask
   set_fact: net_mask="{{ host_fact.ansible_facts.ansible_default_ipv4.network }}/{{ host_fact.ansible_facts.ansible_default_ipv4.netmask }}"
@@ -53,4 +53,4 @@
       status: Reserved
       dns_name: "{{ inventory_hostname }}"
       description: "{{ description }}"
-  state: present
+    state: present
