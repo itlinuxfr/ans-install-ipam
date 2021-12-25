@@ -1,0 +1,10 @@
+---
+
+- hosts: all
+  gather_facts: yes
+
+  tasks:
+  - name: Include les roles
+    include_role:
+      name: role-manage-ipam-000
+      allow_duplicates: false

@@ -1,0 +1,51 @@
+# You need to retrieve Machine information via gather_facts
+
+- name: Netbox - Create a new device with the following
+  netbox_device:
+    netbox_url: "{{ netbox_url }}"
+    netbox_token: "{{ netbox_user_token }}"
+    data:
+      name: "{{ inventory_hostname }}"
+      device_type: "{{ ansible_virtualization_type }}"
+      device_role: "{{ ansible_system_vendor }}"
+      site: "{{ netbox_site }}"
+      status: Active
+      serial: "{{ ansible_product_serial }}"
+      comments: "{{ description }}"
+    state: present
+
+- name: Netbox - Create the device interface
+  network_device_interface:
+    netbox_url: "{{ netbox_url }}"
+    netbox_token: "{{ netbox_user_token }}"
+    data:
+      device: "{{ inventory_hostname }}"
+      enabled: yes
+      mac_address: "{{ ansible_default_ipv4.macaddress }}"
+      mark_connected: yes
+      mgmt_only: yes
+      mtu: 1500
+      name: "{{ ansible_default_ipv4.interface }}"
+  state: present
+
+- name: Netbox - Store the address ipv4 with netmask
+  set_fact: net_mask="{{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}"
+  delegate_to: "{{ ip_dhcp }}"
+
+- name: Netbox - Calcul the real netmask of the network
+  set_fact: net_prefix="{{ net_mask | ipaddr('net') }}"
+  delegate_to: "{{ ip_dhcp }}"
+
+- name: Netbox - Create a new ipv4 address for the device
+  netbox_ip_address:
+    netbox_url: "{{ netbox_url }}"
+    netbox_token: "{{ netbox_user_token }}"
+    data:
+      prefix: "{{ net_prefix }}/{{ net_mask }}"
+      interface: 
+        name: "{{ inventory_hostname }}"
+        device: "{{ ansible_default_ipv4.interface }}"
+      status: Reserved
+      dns_name: "{{ inventory_hostname }}"
+      description: "{{ description }}"
+    state: present
