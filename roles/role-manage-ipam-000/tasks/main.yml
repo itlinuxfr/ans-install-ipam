@@ -31,6 +31,7 @@
       mark_connected: yes
       mgmt_only: yes
       mtu: 1500
+      type: 1000Base-t (1GE)
       name: "{{ host_fact.ansible_facts.ansible_default_ipv4.interface }}"
     state: present
   delegate_to: localhost
