@@ -18,6 +18,7 @@
       serial: "{{ host_fact.ansible_facts.ansible_product_serial }}"
       comments: "{{ description }}"
     state: present
+  delegate_to: localhost
 
 - name: Netbox - Create the device interface
   netbox.netbox.netbox_device_interface:
@@ -32,6 +33,7 @@
       mtu: 1500
       name: "{{ host_fact.ansible_facts.ansible_default_ipv4.interface }}"
     state: present
+  delegate_to: localhost
 
 - name: Netbox - Store the address ipv4 with netmask
   set_fact: net_mask="{{ host_fact.ansible_facts.ansible_default_ipv4.network }}/{{ host_fact.ansible_facts.ansible_default_ipv4.netmask }}"
@@ -54,3 +56,4 @@
       dns_name: "{{ inventory_hostname }}"
       description: "{{ description }}"
     state: present
+  delegate_to: localhost
