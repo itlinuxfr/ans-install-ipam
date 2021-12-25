@@ -51,8 +51,8 @@
     data:
       prefix: "{{ net_prefix }}/{{ net_mask }}"
       interface: 
-        name: "{{ inventory_hostname }}"
-        device: "{{ host_fact.ansible_facts.ansible_default_ipv4.interface }}"
+        name: "{{ host_fact.ansible_facts.ansible_default_ipv4.interface }}" 
+        device: "{{ inventory_hostname }}"
       status: Reserved
       dns_name: "{{ inventory_hostname }}"
       description: "{{ vm.description }}"
