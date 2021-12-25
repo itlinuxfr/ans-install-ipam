@@ -6,7 +6,7 @@
   delegate_to: "{{ ip_dhcp }}"
 
 - name: Netbox - Create a new device with the following
-  netbox.netbox.netbox_device:
+  netbox_device:
     netbox_url: "{{ netbox_url }}"
     netbox_token: "{{ netbox_user_token }}"
     data:
@@ -20,7 +20,7 @@
     state: present
 
 - name: Netbox - Create the device interface
-  netbox.netbox.netbox_device_interface:
+  netbox_device_interface:
     netbox_url: "{{ netbox_url }}"
     netbox_token: "{{ netbox_user_token }}"
     data:
@@ -42,7 +42,7 @@
   delegate_to: "{{ ip_dhcp }}"
 
 - name: Netbox - Create a new ipv4 address for the device
-  netbox.netbox.netbox_ip_address:
+  netbox_ip_address:
     netbox_url: "{{ netbox_url }}"
     netbox_token: "{{ netbox_user_token }}"
     data:
