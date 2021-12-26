@@ -64,4 +64,4 @@
     var: device_ip
 
 - name: Netbox - Fact the new ipv4
-  set_fact: ip="{{ device_ip.content | from_json | json_query('address') }}"
+  set_fact: ip="{{ device_ip | from_json | json_query('address') }}"
