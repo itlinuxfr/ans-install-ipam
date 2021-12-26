@@ -53,7 +53,7 @@
       assigned_object:
         device: "{{ inventory_hostname }}"
         name: "{{ host_fact.ansible_facts.ansible_default_ipv4.interface }}"
-      status: Active
+      status: Reserved
       dns_name: "{{ inventory_hostname }}"
       description: "{{ vm.description }}"
     state: new
