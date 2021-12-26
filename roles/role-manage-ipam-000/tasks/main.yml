@@ -60,8 +60,5 @@
   delegate_to: localhost
   register: device_ip
 
-- debug:
-    var: device_ip
-
 - name: Netbox - Fact the new ipv4
   set_fact: ip="{{ device_ip.ip_address.address | ipaddr('address') }}"
